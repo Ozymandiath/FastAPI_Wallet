@@ -12,10 +12,10 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4())
-    username = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    password_hash = Column(String, nullable=False)
+    user_id = Column(UUID(as_uuid=True), primary_key=True, nullable=False, default=uuid.uuid4())
+    username = Column(String, unique=True, nullable=False)
+    email = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
     first_name = Column(String, nullable=False)
     last_name = Column(String, nullable=False)
     age = Column(Integer, nullable=False)

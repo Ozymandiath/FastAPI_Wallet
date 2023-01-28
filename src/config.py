@@ -1,14 +1,26 @@
+from pydantic import BaseSettings
 from dotenv import load_dotenv
-
-import os
-
 load_dotenv()
 
-DB_USER = os.environ.get("DB_USER")
-DB_PASSWORD = os.environ.get("DB_PASSWORD")
-DB_HOST = os.environ.get("DB_HOST")
-DB_PORT = os.environ.get("DB_PORT")
-DB_NAME = os.environ.get("DB_NAME")
 
-DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+class Settings(BaseSettings):
+    DB_USER: str
+    DB_PASSWORD: str
+    DB_HOST: str
+    DB_PORT: int
+    DB_NAME: str
 
+    JWT_PUBLIC_KEY: str
+    JWT_PRIVATE_KEY: str
+    REFRESH_TOKEN_EXPIRES_IN: int
+    ACCESS_TOKEN_EXPIRES_IN: int
+    JWT_ALGORITHM: str
+
+    class Config:
+        env_file = './.env'
+
+
+settings = Settings()
+
+DATABASE_URL = f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@" \
+               f"{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"

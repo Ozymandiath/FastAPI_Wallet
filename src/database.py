@@ -11,7 +11,7 @@ engine = create_async_engine(
     echo=True,
 )
 
-async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+async_session = sessionmaker(engine, autocommit=False, autoflush=False, expire_on_commit=False, class_=AsyncSession)
 
 
 async def get_db() -> Generator:
