@@ -1,5 +1,5 @@
 from datetime import timedelta
-from fastapi import Response, Request
+from fastapi import Response, Request, Depends
 from pydantic import EmailStr
 from sqlalchemy import select
 from sqlalchemy import or_
@@ -9,8 +9,30 @@ from .exceptions import bad_field, unauthorized, unauthorized_field
 from .models import User
 from .schemas import UserCreateSchema, LoginUserSchema
 from .utils import hash_password, verify_password
+from src.database import get_db
 from src.config import settings
 from src.auth.config import AuthJWT
+
+
+async def require_user(authorize: AuthJWT = Depends(), db: AsyncSession = Depends(get_db)):
+    try:
+        authorize.jwt_required()
+        user_id = authorize.get_jwt_subject()
+        user = await db.execute(select(User).filter_by(user_id=user_id))
+        db_user_id = user.scalars().first()
+
+        if not db_user_id:
+            raise unauthorized("not registered", "User no longer exists")
+
+    except Exception as error:
+        jwt_error = error.__class__.__name__
+        if jwt_error == "MissingTokenError":
+            raise unauthorized("token", "You are not logged in")
+        elif jwt_error == "JWTDecodeError" or jwt_error == "InvalidHeaderError":
+            raise unauthorized("token", "Token does not exist")
+        raise error
+
+    return db_user_id
 
 
 async def _create_user(user: UserCreateSchema, db: AsyncSession):
@@ -68,7 +90,7 @@ async def _login(user: LoginUserSchema, db: AsyncSession, response: Response, au
     return {'status': 'success', 'access_token': access_token}
 
 
-async def _refresh(db: AsyncSession, response: Response, request: Request, authorize: AuthJWT):
+async def _refresh(db: AsyncSession, response: Response, authorize: AuthJWT):
     try:
         authorize.jwt_refresh_token_required()
         user_id = authorize.get_jwt_subject()
@@ -95,11 +117,10 @@ async def _refresh(db: AsyncSession, response: Response, request: Request, autho
     except Exception as error:
         if error.__class__.__name__ == "MissingTokenError":
             raise unauthorized("token", "Please provide refresh token")
-        raise unauthorized("error", "ERROR")
+        raise error
 
 
 async def _logout(response: Response, authorize: AuthJWT):
     authorize.unset_jwt_cookies()
-    # response.delete_cookie()
-    response.set_cookie("logged_in", "False", -1)
+    response.set_cookie("logged_in", "False")
     return {'status': 'success'}
